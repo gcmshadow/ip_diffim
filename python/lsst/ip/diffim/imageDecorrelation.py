@@ -367,17 +367,19 @@ class DecorrelateALKernelTask(pipeBase.Task):
         The maximum correction factor converges to `sqrt(tvar/svar)` towards high frequencies.
         This should be a plausible value.
         """
+        kSum = np.sum(kappa)
         kappa = self.padCenterOriginArray(kappa, self.freqSpaceShape)
         kft = np.fft.fft2(kappa)
-        kft2 = np.real(np.conj(kft) * kft)
-        if preConvArr is None:
-            denom = svar + tvar * kft2
-        else:
+        kftAbsSq = np.real(np.conj(kft) * kft)
+        preSum = 1.
+        preAbsSq = 1.
+        if preConvArr is not None:
+            preSum = np.sum(preConvArr)
             preConvArr = self.padCenterOriginArray(preConvArr, self.freqSpaceShape)
-            mk = np.fft.fft2(preConvArr)
-            mk2 = np.real(np.conj(mk) * mk)
-            denom = svar * mk2 + tvar * kft2
-        kft = np.sqrt((svar + tvar) / denom)
+            preK = np.fft.fft2(preConvArr)
+            preAbsSq = np.real(np.conj(preK)*preK)
+        denom = svar * preAbsSq + tvar * kftAbsSq
+        kft = np.sqrt((svar * preSum*preSum + tvar * kSum*kSum) / denom)
         return kft
 
     def computeCorrectedDiffimPsf(self, corrft, psfOld):
