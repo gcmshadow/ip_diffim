@@ -371,6 +371,7 @@ class DecorrelateALKernelTask(pipeBase.Task):
         kappa = self.padCenterOriginArray(kappa, self.freqSpaceShape)
         kft = np.fft.fft2(kappa)
         kftAbsSq = np.real(np.conj(kft) * kft)
+        # If there is no pre-convolution kernel, use placeholder scalars
         preSum = 1.
         preAbsSq = 1.
         if preConvArr is not None:
@@ -378,8 +379,22 @@ class DecorrelateALKernelTask(pipeBase.Task):
             preConvArr = self.padCenterOriginArray(preConvArr, self.freqSpaceShape)
             preK = np.fft.fft2(preConvArr)
             preAbsSq = np.real(np.conj(preK)*preK)
+
         denom = svar * preAbsSq + tvar * kftAbsSq
+        # Division by zero protection, though we don't expect to hit it
+        # (rather we'll have numerical noise)
+        tiny = np.finfo(kftAbsSq.dtype).tiny * 1000.
+        flt = denom < tiny
+        if np.sum(flt) > 0:
+            haveZero = True
+            denom[flt] = 1.
+        else:
+            haveZero = False
         kft = np.sqrt((svar * preSum*preSum + tvar * kSum*kSum) / denom)
+        # Don't do any correction at these frequencies
+        # the difference image should be close to zero anyway, so can't be decorrelated
+        if haveZero:
+            kft[flt] = 1.
         return kft
 
     def computeCorrectedDiffimPsf(self, corrft, psfOld):
