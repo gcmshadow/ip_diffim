@@ -227,10 +227,15 @@ class DecorrelateALKernelTask(pipeBase.Task):
         psfArr = psfImg.array
 
         # Determine the common shape
+        kSum = np.sum(kArr)
+        self.log.debug("Matching kernel sum: {:.2e}", kSum)
+        preSum = 1.
         if preConvKernel is None:
             self.computeCommonShape(kArr.shape, psfArr.shape, diffExpArr.shape)
             corrft = self.computeCorrection(kArr, svar, tvar)
         else:
+            preSum = np.sum(pckArr)
+            self.log.debug("pre-convolution kernel sum: {:.2e}", preSum)
             self.computeCommonShape(pckArr.shape, kArr.shape,
                                     psfArr.shape, diffExpArr.shape)
             corrft = self.computeCorrection(kArr, svar, tvar, preConvArr=pckArr)
@@ -250,11 +255,11 @@ class DecorrelateALKernelTask(pipeBase.Task):
         # The whitening should scale it to svar + tvar on average
         varImg = correctedExposure.variance.array
         # Allow for numpy type casting
-        varImg[...] = exposure.variance.array + templateExposure.variance.array
+        varImg[...] = preSum*preSum*exposure.variance.array + kSum*kSum*templateExposure.variance.array
         correctedExposure.setPsf(psfNew)
 
         newVarMean = self.computeVarianceMean(correctedExposure)
-        self.log.info(f"Variance (corrected diffim): {newVarMean:.2e}")
+        self.log.info("Variance (corrected diffim): {:.2e}", newVarMean)
 
         # TODO DM-23857 As part of the spatially varying correction implementation
         # consider whether returning a Struct is still necessary.
