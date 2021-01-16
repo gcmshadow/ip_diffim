@@ -228,14 +228,14 @@ class DecorrelateALKernelTask(pipeBase.Task):
 
         # Determine the common shape
         kSum = np.sum(kArr)
-        self.log.debug("Matching kernel sum: {:.2e}", kSum)
+        self.log.debugf("Matching kernel sum: {:.2e}", kSum)
         preSum = 1.
         if preConvKernel is None:
             self.computeCommonShape(kArr.shape, psfArr.shape, diffExpArr.shape)
             corrft = self.computeCorrection(kArr, svar, tvar)
         else:
             preSum = np.sum(pckArr)
-            self.log.debug("pre-convolution kernel sum: {:.2e}", preSum)
+            self.log.debugf("pre-convolution kernel sum: {:.2e}", preSum)
             self.computeCommonShape(pckArr.shape, kArr.shape,
                                     psfArr.shape, diffExpArr.shape)
             corrft = self.computeCorrection(kArr, svar, tvar, preConvArr=pckArr)
@@ -259,7 +259,7 @@ class DecorrelateALKernelTask(pipeBase.Task):
         correctedExposure.setPsf(psfNew)
 
         newVarMean = self.computeVarianceMean(correctedExposure)
-        self.log.info("Variance (corrected diffim): {:.2e}", newVarMean)
+        self.log.infof("Variance (corrected diffim): {:.2e}", newVarMean)
 
         # TODO DM-23857 As part of the spatially varying correction implementation
         # consider whether returning a Struct is still necessary.
